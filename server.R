@@ -1,4 +1,7 @@
-library(shiny)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library("sf")
 library("leaflet")
 library(RCurl)
 library(httr)
@@ -6,12 +9,11 @@ library(shiny)
 library(htmltools)
 library(rsconnect)
 
-time_pm25_map <- st_read("time_pm25_map/time_pm25_map.shp")
-mean_pm25_map <- st_read("mean_pm25_map/mean_pm25_map.shp")
-mean_mortality_map <- st_read("mean_mortality_map/mean_mortality_map.shp")
-time_mortality_map <- st_read("time_mortality_map/time_mortality_map.shp")
+load("time_pm25_map.RData")
+load("mean_pm25_map.RData")
+load("mean_mortality_map.RData")
+load("time_mortality_map.RData")
 
-###############################################################################
 server <- function(input, output) {
   filteredData <- reactive({
     filter(time_pm25_map, year == input$slider)
@@ -60,20 +62,20 @@ server <- function(input, output) {
       )
   })
   
-  mortalitybinpal <- colorBin("YlOrRd", mean_mortality_map$Crud_Rt, 6, pretty = FALSE)
+  mortalitybinpal <- colorBin("YlOrRd", mean_mortality_map$Crude.Rate, 6, pretty = FALSE)
   mortalitypopup <- sprintf(
     "<strong>%s County</strong><br/>%g",
-    mean_mortality_map$NAME, mean_mortality_map$Crud_Rt
+    mean_mortality_map$NAME, mean_mortality_map$Crude.Rate
   ) %>% lapply(htmltools::HTML)
   
   output$mymap4 <- renderLeaflet({
     leaflet() %>%
       addPolygons(data = mean_mortality_map, color = "#444444", weight = 1, smoothFactor = 0.5,
                   opacity = 0.7, fillOpacity = 0.5,
-                  fillColor = ~mortalitybinpal(Crud_Rt),
+                  fillColor = ~mortalitybinpal(Crude.Rate),
                   highlightOptions = highlightOptions(color = "white", weight = 2,
                                                       bringToFront = TRUE), group = "Mortality", popup = ~mortalitypopup) %>%
-      addLegend("bottomright", pal = mortalitybinpal, values = mean_mortality_map$Crud_Rt,
+      addLegend("bottomright", pal = mortalitybinpal, values = mean_mortality_map$Crude.Rate,
                 title = "Mortality (Deaths/Population) per 10,000",
                 opacity = 1, group = "Mortality"
       )
